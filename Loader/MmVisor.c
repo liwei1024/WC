@@ -7,6 +7,12 @@
 #define RVATOVA(BaseAddress, Offset)\
     (PVOID)((ULONG_PTR)BaseAddress + (ULONG_PTR)Offset)
 
+typedef BOOL(APIENTRY *LPENTRYPOINT)(HMODULE, DWORD, LPVOID);
+
+LPENTRYPOINT EntryPoint;
+
+TCHAR swzTemp2[MAX_PATH] = { 0 };
+
 SIZE_T
 MmStrLen(
 	CONST CHAR * Str
@@ -237,6 +243,7 @@ MmLoadLibrary(
 	LPCTSTR lpFileName
 )
 {
+	//1、创建文件句柄
 	HANDLE hFile = CreateFile(
 		lpFileName,
 		GENERIC_WRITE | GENERIC_READ,
@@ -247,18 +254,20 @@ MmLoadLibrary(
 		NULL);
 
 	if (hFile == INVALID_HANDLE_VALUE)return NULL;
-
+	// 2、获取文件大小
 	SIZE_T nSize = GetFileSize(hFile, NULL);
-	PVOID BaseAddress =
-		VirtualAlloc(NULL, nSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	// 3、分配内存
+	PVOID BaseAddress =VirtualAlloc(NULL, nSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
 	ReadFile(hFile, BaseAddress, nSize, NULL, NULL);
 
 	if (hFile)CloseHandle(hFile);
 
 	PIMAGE_DOS_HEADER DosHeader = (PIMAGE_DOS_HEADER)RVATOVA(BaseAddress, 0);
+
 	PIMAGE_NT_HEADERS NtHeader = (PIMAGE_NT_HEADERS)RVATOVA(BaseAddress, DosHeader->e_lfanew);
-	HMODULE hModule =
-		(HMODULE)VirtualAlloc(NULL, NtHeader->OptionalHeader.SizeOfImage, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
+	HMODULE hModule =(HMODULE)VirtualAlloc(NULL, NtHeader->OptionalHeader.SizeOfImage, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 
 	PIMAGE_SECTION_HEADER SectionHeader = IMAGE_FIRST_SECTION(NtHeader);
 
@@ -267,21 +276,37 @@ MmLoadLibrary(
 		MmCopyMemory(
 			RVATOVA(hModule, SectionHeader[i].VirtualAddress),
 			RVATOVA(BaseAddress, SectionHeader[i].PointerToRawData),
-			SectionHeader[i].Misc.VirtualSize);
+			SectionHeader[i].Misc.VirtualSize
+		);
 	}
 
 	MmCopyMemory(
 		hModule,
 		BaseAddress,
-		(PUCHAR)IMAGE_FIRST_SECTION(NtHeader) - (PUCHAR)BaseAddress);
+		(PUCHAR)IMAGE_FIRST_SECTION(NtHeader) - (PUCHAR)BaseAddress
+	);
+	
 	DosHeader = (PIMAGE_DOS_HEADER)RVATOVA(hModule, 0);
 	NtHeader = (PIMAGE_NT_HEADERS)RVATOVA(hModule, DosHeader->e_lfanew);
 
 	VirtualFree(BaseAddress, NtHeader->OptionalHeader.SizeOfImage, MEM_RELEASE);
 
+	swprintf_s(swzTemp2, MAX_PATH, L"MemoryLoad hModule %x", (DWORD)hModule);
+	OutputDebugString(swzTemp2);
+
 	MmFixImportDescriptor(hModule);
+	
 	MmFixBaseRelocation(hModule);
 
+	
+	/*EntryPoint = (LPENTRYPOINT)((DWORD)NtHeader->OptionalHeader.AddressOfEntryPoint +
+		(DWORD)DosHeader);
+	swprintf_s(swzTemp2, MAX_PATH, L"MemoryLoad EntryPoint2 %x", (DWORD)EntryPoint);
+	OutputDebugString(swzTemp2);
+	
+
+	EntryPoint((HINSTANCE)DosHeader, DLL_PROCESS_ATTACH, 0);*/
+	
 	return hModule;
 }
 //

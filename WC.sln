@@ -8,6 +8,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DxfAssistant", "DxfAssistant\DxfAssistant.vcxproj", "{4DEA0D1F-2258-4EAA-B140-71909F1D709E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestExe", "TestExe\TestExe.vcxproj", "{41CE1628-FBD9-4B6D-95B2-C9835FC96BD6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4DEA0D1F-2258-4EAA-B140-71909F1D709E} = {4DEA0D1F-2258-4EAA-B140-71909F1D709E}
+		{5A509028-CDDE-4F0D-AFF4-23A3B85F7170} = {5A509028-CDDE-4F0D-AFF4-23A3B85F7170}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
