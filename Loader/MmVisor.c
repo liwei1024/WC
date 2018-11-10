@@ -117,10 +117,15 @@ MmGetModuleHandle(
 	LPCSTR lpProcName
 )
 {
+//#ifndef _AMD64_
+//	PNT_TIB nt_tib = (PNT_TIB)__readfsdword(offsetof(NT_TIB, Self));
+//#else
+//	PNT_TIB nt_tib = (PVOID)__readgsqword(offsetof(NT_TIB, Self));
+//#endif // !_AMD64_
 #ifndef _AMD64_
-	PNT_TIB nt_tib = (PNT_TIB)__readfsdword(offsetof(NT_TIB, Self));
+	PNT_TIB nt_tib = (PNT_TIB)__readfsdword(0x60);
 #else
-	PNT_TIB nt_tib = (PVOID)__readgsqword(offsetof(NT_TIB, Self));
+	PNT_TIB nt_tib = (PVOID)__readgsqword(0x30);
 #endif // !_AMD64_
 
 	PTEB Teb = (PTEB)nt_tib;
@@ -266,7 +271,11 @@ MmLoadLibrary(
 	PIMAGE_DOS_HEADER DosHeader = (PIMAGE_DOS_HEADER)RVATOVA(BaseAddress, 0);
 
 	PIMAGE_NT_HEADERS NtHeader = (PIMAGE_NT_HEADERS)RVATOVA(BaseAddress, DosHeader->e_lfanew);
-
+	if (NtHeader->Signature != IMAGE_NT_SIGNATURE)
+	{
+		OutputDebugStringA("No PE header found.\n");
+		return NULL;
+	}
 	HMODULE hModule =(HMODULE)VirtualAlloc(NULL, NtHeader->OptionalHeader.SizeOfImage, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 
 	PIMAGE_SECTION_HEADER SectionHeader = IMAGE_FIRST_SECTION(NtHeader);
@@ -291,8 +300,8 @@ MmLoadLibrary(
 
 	VirtualFree(BaseAddress, NtHeader->OptionalHeader.SizeOfImage, MEM_RELEASE);
 
-	swprintf_s(swzTemp2, MAX_PATH, L"MemoryLoad hModule %x", (DWORD)hModule);
-	OutputDebugString(swzTemp2);
+	/*swprintf_s(swzTemp2, MAX_PATH, L"MemoryLoad hModule %x", (DWORD)hModule);
+	OutputDebugString(swzTemp2);*/
 
 	MmFixImportDescriptor(hModule);
 	
